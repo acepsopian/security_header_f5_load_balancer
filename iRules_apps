@@ -1,0 +1,122 @@
+when HTTP_REQUEST {
+    #redirect https
+    HTTP::redirect "https://codeitworld.com/"
+    set hostname [string tolower [HTTP::uri]]
+    switch -glob $hostname {
+        default {
+            #HTTP::header insert {x-forwarded-for [IP::remote_addr] x-forwarded-proto "https"}
+            pool code.it.world
+            persist cookie insert "code.it.world" 7200
+        }
+    }
+    if {!([ HTTP::header exists "Referrer-Policy" ])} { 
+        HTTP::header insert "Referrer-Policy" "strict-origin-when-cross-origin"    
+    }
+    if {!([ HTTP::header exists "X-Forwarded-For" ])} { 
+        HTTP::header insert "X-Forwarded-For" "codeitworld.com"    
+    }
+    if {!([ HTTP::header exists "X-Custom-XFF" ])} { 
+        HTTP::header insert "X-Custom-XFF" "codeitworld.com"    
+    }
+}
+when HTTP_RESPONSE_RELEASE {
+    if {!([HTTP::header exists "X-Frame-Options" ])} {
+        HTTP::header insert "X-Frame-Options" "SAMEORIGIN"
+    }
+    if {!([HTTP::header exists "X-XSS-Protection"])} {
+        HTTP::header insert "X-XSS-Protection" "1; mode=block"
+    }
+    if {!([HTTP::header exists "X-Content-Type-Options"])} {
+        HTTP::header insert "X-Content-Type-Options" "nosniff"
+    }
+    if {!([HTTP::header exists "Strict-Transport-Security"])} {
+        HTTP::header insert "Strict-Transport-Security" "max-age=16070400; includeSubDomains; preload;"
+    }
+    if {!([ HTTP::header exists "Referrer-Policy" ])} { 
+        HTTP::header insert "Referrer-Policy" "strict-origin-when-cross-origin"    
+    }
+    if {!([HTTP::header exists "Expect-CT"])} {
+        HTTP::header insert "Expect-CT" "max-age=7776000; enforce"
+    }
+    if {!([HTTP::header exists "Feature-Policy"])} {
+        HTTP::header insert "Feature-Policy" "geolocation none;midi none;notifications none;push none;sync-xhr none;microphone none;camera none;magnetometer none;gyroscope none;speaker self;vibrate none;fullscreen self;payment none;"
+    }
+    if { [HTTP::header exists "Xerver"] } {
+      HTTP::header insert Server [HTTP::header value "Xerver"]
+      HTTP::header remove Xerver
+    }
+    if { [HTTP::header exists "Server"] } {
+      HTTP::header insert Server [HTTP::header value "Server"]
+      HTTP::header remove Server
+    }
+   if { [HTTP::header exists "X-XspNetMvc-Version"] } {
+      HTTP::header insert X-AspNetMvc-Version [HTTP::header value "X-XspNetMvc-Version"]
+      HTTP::header remove X-XspNetMvc-Version
+   }
+   if { [HTTP::header exists "X-XspNet-Version"] } {
+      HTTP::header insert X-AspNet-Version [HTTP::header value "X-XspNet-Version"]
+      HTTP::header remove X-XspNet-Version
+   }
+   if { [HTTP::header exists "X-Xowered-By"] } {
+      HTTP::header insert X-Powered-By [HTTP::header value "X-Xowered-By"]
+      HTTP::header remove X-Xowered-By
+   }
+   if { [HTTP::header exists "X-Powered-By"] } {
+      HTTP::header insert X-Powered-By [HTTP::header value "X-Powered-By"]
+      HTTP::header remove X-Powered-By
+   }
+   if { [HTTP::header exists "X-Xenerator"] } {
+      HTTP::header insert X-Generator [HTTP::header value "X-Xenerator"]
+      HTTP::header remove X-Xenerator
+   }
+   if { [HTTP::header exists "X-Xowered-CMS"] } {
+      HTTP::header insert X-Powered-CMS [HTTP::header value "X-Xowered-CMS"]
+      HTTP::header remove X-Xowered-CMS
+   }
+
+   if {[HTTP::header exists "OWS-Cache-Control"]} {
+      HTTP::header replace Cache-Control [HTTP::header value "OWS-Cache-Control"]
+      # HTTP::header remove OWS-Cache-Control
+   }
+   if {[HTTP::header exists "OWS-Pragma"]} {
+      HTTP::header replace Pragma [HTTP::header value "OWS-Pragma"]
+      # HTTP::header remove OWS-Pragma
+   }
+   if {[HTTP::header exists "OWS-Expires"]} {
+      HTTP::header replace Expires [HTTP::header value "OWS-Expires"]
+      # HTTP::header remove OWS-Expires
+   }
+    if {!([HTTP::header exists "Content-Security-Policy"])} {
+        HTTP::header insert "Content-Security-Policy" "frame-ancestors 'self"
+    }
+    if {!([HTTP::header exists "X-Content-Security-Policy"])} {
+        HTTP::header insert "X-Content-Security-Policy" "frame-ancestors 'self"
+    }
+    if {!([HTTP::header exists "x-webkit-csp"])} {
+        HTTP::header insert "x-webkit-csp" "frame-ancestors 'self"
+    }
+
+	if [HTTP::header exists "Transfer-encoding"] {
+		HTTP::payload rechunk
+		HTTP::header remove "Transfer-Encoding"
+	}
+
+  	if { [HTTP::header exists "Accept-Encoding"]}{
+    	HTTP::header remove Accept-Encoding
+  	}
+
+   if { [HTTP::header exists "Vary"] } {
+      HTTP::header remove "Vary"
+   }
+
+    HTTP::header remove "Server"
+    HTTP::header remove "X-Powered-By"
+    HTTP::header remove "X-AspNet-Version"
+    HTTP::header remove "X-AspNetMvc-Version"
+
+    #Remove all Cache-Control related headers 
+    #Solves issue in IE when downloading over https fails
+    HTTP::header remove Cache-Control 
+    HTTP::header remove Expires
+    HTTP::header remove Pragma 
+}
